@@ -19,21 +19,23 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
 
+    private EditText creditCardNumberView;
+    private EditText creditCardCvcView;
+    private TextView creditCardType;
+    private TextView errorText;
+    private Button submitButton;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        final Button submitButton = (Button) findViewById(R.id.submit_button);
+        resolveViews();
+
         submitButton.setOnClickListener((view) -> {
             Log.d(TAG, "Submit");
             findViewById(R.id.container).requestFocus();
         });
-
-        final EditText creditCardNumberView = (EditText) findViewById(R.id.credit_card_number);
-        final EditText creditCardCvcView = (EditText) findViewById(R.id.credit_card_cvc);
-        final TextView creditCardType = (TextView) findViewById(R.id.credit_card_type);
-        final TextView errorText = (TextView) findViewById(R.id.error_text);
 
         final Observable<String> creditCardNumber =
                 RxTextView.textChanges(creditCardNumberView)
@@ -96,6 +98,13 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(errorText::setText);
+    }
 
+    private void resolveViews() {
+        creditCardNumberView = (EditText) findViewById(R.id.credit_card_number);
+        creditCardCvcView = (EditText) findViewById(R.id.credit_card_cvc);
+        creditCardType = (TextView) findViewById(R.id.credit_card_type);
+        errorText = (TextView) findViewById(R.id.error_text);
+        submitButton = (Button) findViewById(R.id.submit_button);
     }
 }
