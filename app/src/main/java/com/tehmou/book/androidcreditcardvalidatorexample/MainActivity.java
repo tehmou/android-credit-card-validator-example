@@ -12,6 +12,7 @@ import com.tehmou.book.androidcreditcardvalidatorexample.utils.CardType;
 import com.tehmou.book.androidcreditcardvalidatorexample.utils.ValidationUtils;
 
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import rx.Observable;
 import rx.android.schedulers.AndroidSchedulers;
@@ -22,6 +23,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText creditCardNumberView;
     private EditText creditCardCvcView;
     private TextView creditCardType;
+    private EditText creditCardExpirationDateView;
     private TextView errorText;
     private Button submitButton;
 
@@ -37,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
             findViewById(R.id.container).requestFocus();
         });
 
+        // Create source Observables
         final Observable<String> creditCardNumber =
                 RxTextView.textChanges(creditCardNumberView)
                         .map(CharSequence::toString);
@@ -45,6 +48,11 @@ public class MainActivity extends AppCompatActivity {
                 RxTextView.textChanges(creditCardCvcView)
                         .map(CharSequence::toString);
 
+        final Observable<String> creditCardExpirationDate =
+                RxTextView.textChanges(creditCardExpirationDateView)
+                        .map(CharSequence::toString);
+
+        // Create derived Observables
         final Observable<CardType> cardType =
                 creditCardNumber
                         .map(CardType::fromNumber);
@@ -69,6 +77,13 @@ public class MainActivity extends AppCompatActivity {
                         creditCardCvc,
                         ValidationUtils::isValidCvc);
 
+        Pattern expirationDatePattern = Pattern.compile("^\\d\\d/\\d\\d$");
+        final Observable<Boolean> isValidExpirationDate =
+                creditCardExpirationDate
+                        .map(text -> expirationDatePattern.matcher(text).find());
+
+
+        // Show output in the UI
         cardType
                 .map(Enum::toString)
                 .observeOn(AndroidSchedulers.mainThread())
@@ -77,7 +92,9 @@ public class MainActivity extends AppCompatActivity {
         Observable.combineLatest(
                 isValidNumber,
                 isValidCvc,
-                (isValidNumberValue, isValidCvcValue) -> isValidNumberValue && isValidCvcValue)
+                isValidExpirationDate,
+                (isValidNumberValue, isValidCvcValue, isValidExpirationDateValue) ->
+                        isValidNumberValue && isValidCvcValue && isValidExpirationDateValue)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(submitButton::setEnabled);
 
@@ -85,7 +102,8 @@ public class MainActivity extends AppCompatActivity {
                 Arrays.asList(
                         isKnownCardType.map(value -> value ? "" : "Unknown card type"),
                         isValidCheckSum.map(value -> value ? "" : "Invalid checksum"),
-                        isValidCvc.map(value -> value ? "" : "Invalid CVC code")),
+                        isValidCvc.map(value -> value ? "" : "Invalid CVC code"),
+                        isValidExpirationDate.map(value -> value ? "" : "Invalid expiration date")),
                 (errorStrings) -> {
                     StringBuilder builder = new StringBuilder();
                     for (Object errorString : errorStrings) {
@@ -104,6 +122,7 @@ public class MainActivity extends AppCompatActivity {
         creditCardNumberView = (EditText) findViewById(R.id.credit_card_number);
         creditCardCvcView = (EditText) findViewById(R.id.credit_card_cvc);
         creditCardType = (TextView) findViewById(R.id.credit_card_type);
+        creditCardExpirationDateView = (EditText) findViewById(R.id.expiration_date);
         errorText = (TextView) findViewById(R.id.error_text);
         submitButton = (Button) findViewById(R.id.submit_button);
     }
