@@ -89,16 +89,30 @@ public class MainActivity extends AppCompatActivity {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(creditCardType::setText);
 
-        Observable.combineLatest(
-                isValidNumber,
-                isValidCvc,
-                isValidExpirationDate,
-                (isValidNumberValue, isValidCvcValue, isValidExpirationDateValue) ->
-                        isValidNumberValue && isValidCvcValue && isValidExpirationDateValue)
+        getSubmitButtonEnabled(isValidNumber, isValidCvc, isValidExpirationDate)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(submitButton::setEnabled);
 
-        Observable.combineLatest(
+        getErrorText(isKnownCardType, isValidCheckSum, isValidCvc, isValidExpirationDate)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(errorText::setText);
+    }
+
+    private static Observable<Boolean> getSubmitButtonEnabled(
+            Observable<Boolean> isValidNumber,
+            Observable<Boolean> isValidCvc,
+            Observable<Boolean> isValidExpirationDate) {
+        return Observable.combineLatest(
+                isValidNumber, isValidCvc, isValidExpirationDate,
+                (isValidNumberValue, isValidCvcValue, isValidExpirationDateValue) ->
+                        isValidNumberValue && isValidCvcValue && isValidExpirationDateValue);
+    }
+
+    private static Observable<String> getErrorText(Observable<Boolean> isKnownCardType,
+                                                   Observable<Boolean> isValidCheckSum,
+                                                   Observable<Boolean> isValidCvc,
+                                                   Observable<Boolean> isValidExpirationDate) {
+        return Observable.combineLatest(
                 Arrays.asList(
                         isKnownCardType.map(value -> value ? "" : "Unknown card type"),
                         isValidCheckSum.map(value -> value ? "" : "Invalid checksum"),
@@ -113,9 +127,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                     return builder.toString();
-                })
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(errorText::setText);
+                });
     }
 
     private void resolveViews() {
