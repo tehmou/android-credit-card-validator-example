@@ -1,5 +1,6 @@
 package com.tehmou.book.androidcreditcardvalidatorexample;
 
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -7,6 +8,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.jakewharton.rxbinding2.view.RxView;
 import com.jakewharton.rxbinding2.widget.RxTextView;
 import com.tehmou.book.androidcreditcardvalidatorexample.utils.CardType;
 import com.tehmou.book.androidcreditcardvalidatorexample.utils.ValidationUtils;
@@ -96,6 +98,10 @@ public class MainActivity extends AppCompatActivity {
         getErrorText(isKnownCardType, isValidCheckSum, isValidCvc, isValidExpirationDate)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(errorText::setText);
+
+        showErrorForEditText(creditCardNumberView, isValidNumber);
+        showErrorForEditText(creditCardCvcView, isValidCvc);
+        showErrorForEditText(creditCardExpirationDateView, isValidExpirationDate);
     }
 
     private static Observable<Boolean> getSubmitButtonEnabled(
@@ -128,6 +134,31 @@ public class MainActivity extends AppCompatActivity {
                     }
                     return builder.toString();
                 });
+    }
+
+    private static void showErrorForEditText(EditText editText,
+                                             Observable<Boolean> isValid) {
+        getShowErrorForEditText(editText, isValid)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(value -> editText.setTextColor(
+                        value ? Color.RED : Color.BLACK));
+    }
+
+    private static Observable<Boolean> getShowErrorForEditText(EditText editText,
+                                                               Observable<Boolean> isValid) {
+        // We need refCount because we have two subscribers: otherwise the first will be
+        // unsubscribed automatically when second one arrives
+        final Observable<Boolean> hasFocus = RxView.focusChanges(editText).publish().refCount();
+        
+        final Observable<Boolean> hasHadFocus =
+                Observable.concat(
+                        Observable.just(false),
+                        hasFocus.filter(value -> value).firstElement().toObservable());
+
+        return Observable.combineLatest(
+                hasHadFocus, hasFocus, isValid,
+                (hasHadFocusValue, hasFocusValue, isValidValue) ->
+                        hasHadFocusValue && (!hasFocusValue && !isValidValue));
     }
 
     private void resolveViews() {
